@@ -1,0 +1,4 @@
+click
+fusepy
+requests
+requests_oauthlib

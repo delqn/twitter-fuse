@@ -21,3 +21,7 @@ clean:
 .PHONY: test
 test: clean lint
 	nosetests $(find . -name "_test.py")
+
+.PHONY: requirements
+requirements:
+	pip install -r requirements.txt
