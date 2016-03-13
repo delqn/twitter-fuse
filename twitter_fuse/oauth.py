@@ -3,11 +3,11 @@ import urlparse
 
 from requests_oauthlib import OAuth1
 
-from .config import get_conf
+from .config import get_config
 
 
 def _request_token():
-    conf = get_conf()
+    conf = get_config()
     oauth = OAuth1(conf['consumer_key'], client_secret=conf['consumer_secret'])
     response = requests.post(url=conf['request_token_url'], auth=oauth)
     credentials = urlparse.parse_qs(response.content)
@@ -15,7 +15,7 @@ def _request_token():
 
 
 def _authorize():
-    conf = get_conf()
+    conf = get_config()
     resource_owner_key, resource_owner_secret = _request_token()
     authorize_url = conf['authorize_url'] + resource_owner_key
     print 'Visit this link and authorize: ' + authorize_url
@@ -29,7 +29,7 @@ def _authorize():
 
 
 def oauth_token_and_secret():
-    conf = get_conf()
+    conf = get_config()
     oauth = _authorize()
     response = requests.post(url=conf['access_token_url'], auth=oauth)
     credentials = urlparse.parse_qs(response.content)
@@ -39,7 +39,7 @@ def oauth_token_and_secret():
 
 
 def get_oauth():
-    conf = get_conf()
+    conf = get_config()
     oauth = OAuth1(
         conf['consumer_key'],
         client_secret=conf['consumer_secret'],

@@ -1,0 +1,8 @@
+[twitterapi]
+access_token_url = https://api.twitter.com/oauth/access_token
+authorize_url = https://api.twitter.com/oauth/authorize?oauth_token=
+consumer_key = xyz
+consumer_secret = abc
+request_token_url = https://api.twitter.com/oauth/request_token
+oauth_token = ''
+oauth_secret = ''

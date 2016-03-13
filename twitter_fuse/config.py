@@ -7,14 +7,17 @@ SECTION = None
 conf = None
 
 
-def init(config_file, section):
-    global CONFIG_FILE, SECTION
-    CONFIG_FILE = config_file
-    SECTION = section
-
-
-def get_conf():
+def get_config(config_file=None, section=None):
     global conf
+    global CONFIG_FILE, SECTION
+    if config_file:
+        CONFIG_FILE = config_file
+    if section:
+        SECTION = section
+
+    if not CONFIG_FILE or not SECTION:
+        raise ValueError()
+
     if not CONFIG_FILE:
         logger.exception('Config not initialized')
         raise ValueError()

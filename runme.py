@@ -1,4 +1,5 @@
 #!/usr/bin/env python2.7
+# pylint: disable=unexpected-keyword-arg, no-value-for-parameter
 
 import click
 import ConfigParser
@@ -10,14 +11,14 @@ SECTION = 'twitterapi'
 
 
 @click.command()
-@click.option('--mountpoint', default='./twitter')
+@click.option('--mountpoint', default='./mnt')
 def mount_twitter(mountpoint):
     mount.mount(mountpoint)
 
 
 if __name__ == "__main__":
     config.init(CONFIG_FILE, SECTION)
-    conf = config.get_conf()
+    conf = config.get_config()
     if not conf.get('oauth_token'):  # TODO: or expired??
         oauth_token, oauth_secret = oauth_token_and_secret()
         _config = ConfigParser.RawConfigParser()
