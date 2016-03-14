@@ -25,27 +25,23 @@ def get_friends():
     screen_name = get_settings().get('screen_name')
     cursor = -1
     friends = set()
-    sequence = 0
-    while True:
-        sequence += 1
-        url = '{}/friends/list.json?screen_name={}'.format(PRE, screen_name)
-        url += '&count={}'.format(MAX_FRIENDS_PER_REQUEST)
-        url += '&cursor={}'.format(cursor)
-        logger.info('[%s] Fetching @%s\'s friends: %s', sequence, screen_name, url)
+    static_url = '{}/friends/list.json?screen_name={}&count={}'.format(
+        PRE, screen_name, MAX_FRIENDS_PER_REQUEST)
+    while len(friends) < MAX_TOTAL_FRIENDS:
+        url = static_url + '&cursor={}'.format(cursor)
+        logger.info('[twitter] Fetching @%s\'s friends: %s', screen_name, url)
         response = requests.get(url, auth=get_oauth()).json()
-        errors = set()
+        errors = None
         if 'errors' in response:
-            for error in response['errors']:
-                errors.add(error['message'])
-                logger.error('[twitter][get_friends] Error: %s', error['message'])
+            errors = set(error for error in response['errors'])
+            logger.error('[twitter][get_friends] Errors: %s', ','.join(errors))
             break
         logger.info('[twitter] get_friends -> %s', response)
-        new_cursor = response.get('next_cursor')
+        next_cursor = response.get('next_cursor')
         friends.update(set(user['screen_name'] for user in response.get('users', [])))
-        if not new_cursor or len(friends) >= MAX_TOTAL_FRIENDS or new_cursor == cursor:
+        if not next_cursor or next_cursor == cursor:
             break
-        cursor = new_cursor
-    logger.info('[twitter] Friends: %s', friends)
+        cursor = next_cursor
     return friends, errors
 
 
@@ -56,38 +52,24 @@ def get_settings():
 
 
 def get_tweets(screen_name):
-    last_id = None
-    user_tweets = {}
-    sequence = 0
-    while len(user_tweets.get(screen_name, [])) < MAX_TWEETS_PER_FRIEND:
-        sequence += 1
-        logger.info('[twitter][%s] Getting tweets for @%s', sequence, screen_name)
-        url = '{}/statuses/user_timeline.json'.format(PRE)
-        url += '?screen_name={}'.format(screen_name)
-        url += '&count={}'.format(MAX_TWEETS_PER_REQUEST)
-        if last_id:
-            url += '&max_id={}'.format(last_id)
-        logger.info('[twitter] Fetching %s', url)
-
+    max_id = None
+    user_tweets = []
+    static_url = '{}/statuses/user_timeline.json?screen_name={}&count={}'.format(
+        PRE, screen_name, MAX_TWEETS_PER_REQUEST)
+    while len(user_tweets) < MAX_TWEETS_PER_FRIEND:
+        url = static_url + ('&max_id={}'.format(max_id) if max_id else '')
+        logger.info('[twitter] Getting tweets for @%s via %s', screen_name, url)
         response = requests.get(url, auth=get_oauth())
-
         if not response:
-            logger.info('[twitter] DONE: getting tweets for @%s', screen_name)
             break
-        new_tweets = [(t['id_str'], timestamp(t['created_at']), bytearray(t['text'], 'utf-8'))
-                      for t in response.json()]
-        if not new_tweets:
-            logger.info('[twitter] DONE: now new tweets for @%s', screen_name)
+        _new = ((t['id_str'], t['created_at'], t['text']) for t in response.json())
+        new_tweets = [(tid, timestamp(tdate), bytearray(txt, 'utf-8')) for tid, tdate, txt in _new]
+        new_max_id = new_tweets[-1][0]
+        if new_max_id == max_id:
             break
-        new_last_id = new_tweets[-1][0]
-        if new_last_id == last_id:
-            logger.info('[twitter] DONE: getting tweets for @%s', screen_name)
-            break
-        else:
-            last_id = new_last_id
-            user_tweets.setdefault(screen_name, [])
-            user_tweets[screen_name].extend(new_tweets)
-    return user_tweets.get(screen_name, [])
+        max_id = new_max_id
+        user_tweets.extend(new_tweets)
+    return user_tweets
 
 
 def get_rate_limit_status():

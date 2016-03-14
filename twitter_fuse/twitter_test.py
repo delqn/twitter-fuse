@@ -42,7 +42,7 @@ class TwitterTest(unittest.TestCase):
     def get_friends_test(self):
         friends, errors = twitter.get_friends()
         self.assertEqual(friends, set(['a', 'b']))
-        self.assertEqual(errors, set())
+        self.assertEqual(errors, None)
 
     @responses.activate
     def get_settings_test(self):
