@@ -7,10 +7,10 @@ from .logger import logger
 
 
 PRE = 'https://api.twitter.com/1.1'
-MAX_TOTAL_FRIENDS = 500
-MAX_FRIENDS_PER_REQUEST = 200
-MAX_TWEETS_PER_FRIEND = 3500
-MAX_TWEETS_PER_REQUEST = 500
+TOTAL_FRIENDS = 500
+FRIENDS_PER_REQUEST = 200
+TWEETS_PER_FRIEND = 3500
+TWEETS_PER_REQUEST = 500
 
 
 def timestamp(string):
@@ -26,8 +26,9 @@ def get_friends():
     cursor = -1
     friends = set()
     static_url = '{}/friends/list.json?screen_name={}&count={}'.format(
-        PRE, screen_name, MAX_FRIENDS_PER_REQUEST)
-    while len(friends) < MAX_TOTAL_FRIENDS:
+        PRE, screen_name,
+        FRIENDS_PER_REQUEST if FRIENDS_PER_REQUEST < TOTAL_FRIENDS else TOTAL_FRIENDS)
+    while len(friends) < TOTAL_FRIENDS:
         url = static_url + '&cursor={}'.format(cursor)
         logger.info('[twitter] Fetching @%s\'s friends: %s', screen_name, url)
         response = requests.get(url, auth=get_oauth()).json()
@@ -55,8 +56,8 @@ def get_tweets_for(screen_name):
     max_id = None
     user_tweets = []
     static_url = '{}/statuses/user_timeline.json?screen_name={}&count={}'.format(
-        PRE, screen_name, MAX_TWEETS_PER_REQUEST)
-    while len(user_tweets) < MAX_TWEETS_PER_FRIEND:
+        PRE, screen_name, TWEETS_PER_REQUEST)
+    while len(user_tweets) < TWEETS_PER_FRIEND:
         url = static_url + ('&max_id={}'.format(max_id) if max_id else '')
         logger.info('[twitter] Getting tweets for @%s via %s', screen_name, url)
         response = requests.get(url, auth=get_oauth())

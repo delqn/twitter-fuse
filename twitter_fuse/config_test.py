@@ -18,7 +18,7 @@ class ConfigTest(unittest.TestCase):
                     'oauth_secret\n')
 
     def parse_test(self):
-        conf_first = config.get_config('fuse.conf.tests', 'twitterapi')
+        conf_first = config.get_config(CONF_FILE, 'twitterapi')
         expected = {
             'access_token_url': 'https://api.twitter.com/oauth/access_token',
             'authorize_url': 'https://api.twitter.com/oauth/authorize?oauth_token=',
@@ -30,7 +30,7 @@ class ConfigTest(unittest.TestCase):
         }
         self.assertEqual(conf_first, expected)
 
-        conf_second = config.get_config('fuse.conf.tests', 'twitterapi')
+        conf_second = config.get_config(CONF_FILE, 'twitterapi')
         self.assertEqual(conf_second, expected)
 
     def store_oauth_test(self):

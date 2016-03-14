@@ -1,20 +1,29 @@
+import ctypes
 import mock
 import unittest
 
 from fuse import FuseOSError
 
 from . import mount
+from . import config
+
+CONF_FILE = 'fuse.conf.tests'
 
 
 class MountTest(unittest.TestCase):
     def setUp(self):
+        config.get_config(CONF_FILE, 'twitterapi')
         mount.twitter = mock.MagicMock()
         mount.twitter.get_friends.return_value = (['a', 'b'], None)
         self.mount = mount.TwitterClient()
         self.mount.followers = ['a', 'b', 'some_user']
-        self.mount.user_tweets = {'a': {'3': 'three', '4': 'four'},
-                                  'b': {'5': 'five'},
-                                  'some_user': {'6': 'six', '7': 'seven'}}
+        self.mount.user_tweets = {'a': {'3': (123, bytearray(b'three')),
+                                        '4': (124, bytearray(b'four'))},
+                                  'b': {'5': (256, bytearray(b'five'))},
+                                  'some_user': {
+                                      '6': (221, bytearray(b'six')),
+                                      '7': (456, bytearray(b'@seven3d needs custom '
+                                                           'kernel molds'))}}
 
     def test_access(self):
         mode = 1
@@ -40,13 +49,22 @@ class MountTest(unittest.TestCase):
         path = '/error'
         attr = self.mount.getattr(path, fh=None)
         expected = {'st_ctime': mock.ANY, 'st_mtime': mock.ANY, 'st_nlink': 0, 'st_gid': mock.ANY,
-                    'st_size': 27, 'st_mode': 33188, 'st_uid': mock.ANY, 'st_atime': mock.ANY}
+                    'st_size': mock.ANY, 'st_mode': 33188, 'st_uid': mock.ANY,
+                    'st_atime': mock.ANY}
+        self.assertEqual(attr, expected)
+
+    def test_getattr_mathematica_notebook(self):
+        path = '/some_user.nb'
+        attr = self.mount.getattr(path, fh=None)
+        expected = {'st_ctime': mock.ANY, 'st_mtime': mock.ANY, 'st_nlink': 0, 'st_gid': mock.ANY,
+                    'st_size': 1487, 'st_mode': 33188, 'st_uid': mock.ANY,
+                    'st_atime': mock.ANY}
         self.assertEqual(attr, expected)
 
     def test_readdir_slash(self):
         path = '/'
         dirs = list(self.mount.readdir(path, fh=12))
-        expected = ['.', '..', 'a', 'b', 'some_user', 'errors']
+        expected = ['.', '..', 'a', 'a.nb', 'b', 'b.nb', 'some_user', 'some_user.nb', 'errors']
         self.assertEqual(sorted(dirs), sorted(expected))
 
     def test_readdir_user(self):
@@ -70,3 +88,13 @@ class MountTest(unittest.TestCase):
         offset = 1
         fh = 12
         self.mount.read(path, length, offset, fh)
+
+    def test_read_mathematica_notebook(self):
+        path = '/some_user.nb'
+        notebook_content = self.mount.read(path, length=999999, offset=0, fh=12)
+        self.assertIn('six', notebook_content)
+        self.assertIn('seven', notebook_content)
+        ctypes.create_string_buffer(notebook_content)
+
+    def test_parse_path(self):
+        self.assertEqual((None, None), mount.parse_path('/'))

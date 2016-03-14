@@ -5,6 +5,7 @@ import os
 
 from .twitter import get_friends, get_tweets_for
 from .logger import logger
+from .mathematica import make_notebook
 
 from fuse import FUSE, FuseOSError, Operations
 
@@ -18,6 +19,11 @@ class TwitterClient(Operations):
         self.user_tweets = {}
         self.access_seqnum = 0
 
+    def _fill_tweets_for(self, screen_name):
+        if screen_name not in self.user_tweets:
+            self.user_tweets[screen_name] = {
+                tid: (tdate, txt) for tid, tdate, txt in get_tweets_for(screen_name)}
+
     def access(self, path, mode):
         self.access_seqnum += 1
         # logger.info('[%s]: access:   path=%s, mode=%s', self.access_seqnum, path, mode)
@@ -28,9 +34,7 @@ class TwitterClient(Operations):
         if screen_name not in self.followers:
             raise FuseOSError(errno.EACCES)
 
-        if screen_name not in self.user_tweets:
-            self.user_tweets[screen_name] = {
-                tid: (tdate, txt) for tid, tdate, txt in get_tweets_for(screen_name)}
+        self._fill_tweets_for(screen_name)
 
         if not tweet_id:
             return
@@ -43,11 +47,17 @@ class TwitterClient(Operations):
         st_mtime = 1
         st_mode = 16877
         screen_name, tweet_id = parse_path(path)
-        is_file = tweet_id in self.user_tweets.get(screen_name, {}) or 'error' in path
+        is_file = (tweet_id in self.user_tweets.get(screen_name, {}) or
+                   'error' in path or
+                   '.nb' in path)
         if is_file:
             st_mode = 33188
             if 'error' in path:
                 st_size = len('\n'.join(self.errors)) if self.errors else 0
+            elif '.nb' in path:
+                self._fill_tweets_for(screen_name)
+                tweets_text = [t[1] for t in self.user_tweets[screen_name].values()]
+                st_size = len(make_notebook(tweets_text))
             else:
                 st_mtime, tweet = self.user_tweets[screen_name].get(tweet_id, (None, 0))
                 st_size = len(bytearray(tweet)) if tweet else 0
@@ -65,6 +75,7 @@ class TwitterClient(Operations):
             dirs.append('errors')
         if path == '/':
             dirs.extend(self.followers)
+            dirs.extend(['{}.nb'.format(follower) for follower in self.followers])
         else:
             screen_name, _ = parse_path(path)
             dirs.extend(self.user_tweets[screen_name].keys())
@@ -94,15 +105,19 @@ class TwitterClient(Operations):
         if 'error' in path:
             return '\n'.join(self.errors if self.errors else [])
         screen_name, tweet_id = parse_path(path)
+        if '.nb' in path:
+            self._fill_tweets_for(screen_name)
+            tweets_text = [t[1] for t in self.user_tweets.get(screen_name, {}).values()]
+            return make_notebook(tweets_text)[offset: offset + length]
         _, tweet = self.user_tweets.get(screen_name, {}).get(tweet_id, (0, ''))
         return ''.join([chr(x) for x in tweet[offset: offset + length]])
 
 
 def parse_path(path):
     pieces = path.split('/')
-    screen_name = pieces[1]
+    screen_name = pieces[1].replace('.nb', '')
     tweet_id = pieces[2] if len(pieces) > 2 else None
-    return screen_name, tweet_id
+    return screen_name if screen_name else None, tweet_id
 
 
 def mount(mountpoint):
