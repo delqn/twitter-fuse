@@ -8,8 +8,7 @@ conf = None
 
 
 def get_config(config_file=None, section=None):
-    global conf
-    global CONFIG_FILE, SECTION
+    global CONFIG_FILE, SECTION, conf
     if config_file:
         CONFIG_FILE = config_file
     if section:
@@ -22,7 +21,7 @@ def get_config(config_file=None, section=None):
         logger.exception('Config not initialized')
         raise ValueError()
     if not conf:
-        config = ConfigParser.ConfigParser()
+        config = ConfigParser.ConfigParser(allow_no_value=True)
         config.read(CONFIG_FILE)
 
         conf_keys = (
@@ -31,3 +30,15 @@ def get_config(config_file=None, section=None):
             'oauth_token', 'oauth_secret')
         conf = {key: config.get(SECTION, key) for key in conf_keys}
     return conf
+
+
+def store_oauth(oauth_token, oauth_secret):
+    global conf
+    _config = ConfigParser.RawConfigParser(allow_no_value=True)
+    _config.read(CONFIG_FILE)
+    _config.set(SECTION, 'oauth_token', oauth_token)
+    _config.set(SECTION, 'oauth_secret', oauth_secret)
+    with open(CONFIG_FILE, 'wb') as configfile:
+        print 'Writing to {}'.format(configfile)
+        _config.write(configfile)
+    conf = get_config()
