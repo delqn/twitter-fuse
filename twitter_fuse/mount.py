@@ -2,7 +2,6 @@ from __future__ import with_statement
 
 import errno
 import os
-import time
 
 from .twitter import get_friends, get_tweets_for
 from .logger import logger
@@ -40,29 +39,23 @@ class TwitterClient(Operations):
             raise FuseOSError(errno.EACCES)
 
     def getattr(self, path, fh=None):
+        st_size = 68
+        st_mtime = 1
+        st_mode = 16877
         screen_name, tweet_id = parse_path(path)
-        now = int(time.time())
-        attr = dict(
-            st_uid=UID, st_gid=GID,
-            st_atime=0, st_ctime=0, st_mtime=now,
-            st_nlink=0,
-            st_mode=16877,
-            st_size=68)
-
         is_file = tweet_id in self.user_tweets.get(screen_name, {}) or 'error' in path
-
         if is_file:
+            st_mode = 33188
             if 'error' in path:
-                errors_str = '\n'.join(self.errors if self.errors else [])
-                attr.update(dict(st_size=len(errors_str)))
+                st_size = len('\n'.join(self.errors)) if self.errors else 0
             else:
-                # TODO: get the date and make it the file's
-                timestamp, tweet = self.user_tweets[screen_name].get(tweet_id, (None, 0))
-                attr.update(dict(st_mtime=timestamp,
-                                 st_size=len(bytearray(tweet)) if tweet else 0))
-            attr.update(dict(st_mode=33188))
-        logger.info('[mount] getattr: path=%s, fh=%s, attr=%s', path, fh, attr)
-        return attr
+                st_mtime, tweet = self.user_tweets[screen_name].get(tweet_id, (None, 0))
+                st_size = len(bytearray(tweet)) if tweet else 0
+        logger.info('[mount] getattr: path=%s, fh=%s', path, fh)
+        return dict(
+            st_uid=UID, st_gid=GID,
+            st_atime=0, st_ctime=0, st_mtime=st_mtime,
+            st_nlink=0, st_mode=st_mode, st_size=st_size)
 
     def readdir(self, path, fh):
         logger.info('[mount] readdir: path=%s, fh=%s, len(followers)=%s, len(user_tweets)=%s',
