@@ -8,9 +8,9 @@ from .logger import logger
 
 PRE = 'https://api.twitter.com/1.1'
 MAX_TOTAL_FRIENDS = 500
-MAX_FRIENDS_PER_REQUEST = 20
-MAX_TWEETS_PER_FRIEND = 100
-MAX_TWEETS_PER_REQUEST = 50
+MAX_FRIENDS_PER_REQUEST = 200
+MAX_TWEETS_PER_FRIEND = 3500
+MAX_TWEETS_PER_REQUEST = 500
 
 
 def timestamp(string):
@@ -33,7 +33,7 @@ def get_friends():
         response = requests.get(url, auth=get_oauth()).json()
         errors = None
         if 'errors' in response:
-            errors = set(error for error in response['errors'])
+            errors = set(error['message'] for error in response['errors'])
             logger.error('[twitter][get_friends] Errors: %s', ','.join(errors))
             break
         logger.info('[twitter] get_friends -> %s', response)
@@ -51,7 +51,7 @@ def get_settings():
     return requests.get(url, auth=get_oauth()).json()
 
 
-def get_tweets(screen_name):
+def get_tweets_for(screen_name):
     max_id = None
     user_tweets = []
     static_url = '{}/statuses/user_timeline.json?screen_name={}&count={}'.format(

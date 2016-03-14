@@ -50,8 +50,8 @@ class TwitterTest(unittest.TestCase):
         self.assertEqual(settings, {})
 
     @responses.activate
-    def get_tweets_test(self):
-        tweets = twitter.get_tweets(screen_name='some-user')
+    def get_tweets_for_test(self):
+        tweets = twitter.get_tweets_for(screen_name='some-user')
         expected = [
             ('240859602684612608',
              1346289178,

@@ -40,19 +40,19 @@ class MountTest(unittest.TestCase):
         path = '/error'
         attr = self.mount.getattr(path, fh=None)
         expected = {'st_ctime': mock.ANY, 'st_mtime': mock.ANY, 'st_nlink': 0, 'st_gid': mock.ANY,
-                    'st_size': 0, 'st_mode': 33188, 'st_uid': mock.ANY, 'st_atime': mock.ANY}
+                    'st_size': 27, 'st_mode': 33188, 'st_uid': mock.ANY, 'st_atime': mock.ANY}
         self.assertEqual(attr, expected)
 
     def test_readdir_slash(self):
         path = '/'
         dirs = list(self.mount.readdir(path, fh=12))
-        expected = ['.', '..', 'a', 'b', 'some_user']
-        self.assertEqual(dirs, expected)
+        expected = ['.', '..', 'a', 'b', 'some_user', 'errors']
+        self.assertEqual(sorted(dirs), sorted(expected))
 
     def test_readdir_user(self):
         path = '/some_user'
         dirs = list(self.mount.readdir(path, fh=12))
-        expected = ['.', '..', '6', '7']
+        expected = ['.', '..', '6', '7', 'errors']
         self.assertEqual(sorted(dirs), sorted(expected))
 
     def test_statfs(self):

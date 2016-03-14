@@ -4,7 +4,7 @@ import errno
 import os
 import time
 
-from . import twitter
+from .twitter import get_friends, get_tweets_for
 from .logger import logger
 
 from fuse import FUSE, FuseOSError, Operations
@@ -15,7 +15,7 @@ UID = os.getuid()
 
 class TwitterClient(Operations):
     def __init__(self):
-        self.followers, self.errors = twitter.get_friends()
+        self.followers, self.errors = get_friends()
         self.user_tweets = {}
         self.access_seqnum = 0
 
@@ -29,10 +29,9 @@ class TwitterClient(Operations):
         if screen_name not in self.followers:
             raise FuseOSError(errno.EACCES)
 
-        if not self.user_tweets.get(screen_name):
-            tweets = {t[0]: t[1:] for t in twitter.get_tweets(screen_name)}
-            self.user_tweets.setdefault(screen_name, {})
-            self.user_tweets[screen_name].update(tweets)
+        if screen_name not in self.user_tweets:
+            self.user_tweets[screen_name] = {
+                tid: (tdate, txt) for tid, tdate, txt in get_tweets_for(screen_name)}
 
         if not tweet_id:
             return
@@ -66,8 +65,8 @@ class TwitterClient(Operations):
         return attr
 
     def readdir(self, path, fh):
-        logger.info('[mount] readdir: path=%s, fh=%s, followers=%s, self.user_tweets=%s',
-                    path, fh, self.followers, self.user_tweets)
+        logger.info('[mount] readdir: path=%s, fh=%s, len(followers)=%s, len(user_tweets)=%s',
+                    path, fh, len(self.followers), len(self.user_tweets))
         dirs = ['.', '..']
         if self.errors:
             dirs.append('errors')
