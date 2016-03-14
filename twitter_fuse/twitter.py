@@ -7,17 +7,18 @@ from .logger import logger
 
 
 PRE = 'https://api.twitter.com/1.1'
-MAX_TOTAL_FRIENDS = 5
+MAX_TOTAL_FRIENDS = 500
 MAX_FRIENDS_PER_REQUEST = 20
+MAX_TWEETS_PER_FRIEND = 100
+MAX_TWEETS_PER_REQUEST = 50
 
 
 def timestamp(string):
     '''Convert string date to timestamp'''
+    # TODO: figure out why %z does not work as expected with +0000
+    string = string.replace('+0000 ', '')
     return int(time.mktime(
-        datetime.datetime.strptime(
-            string.replace('+0000 ', ''),
-            '%a %b %d %H:%M:%S %Y'
-        ).utctimetuple()))
+        datetime.datetime.strptime(string, '%a %b %d %H:%M:%S %Y').utctimetuple()))
 
 
 def get_friends():
@@ -57,15 +58,13 @@ def get_settings():
 def get_tweets(screen_name):
     last_id = None
     user_tweets = {}
-    max_tweets_per_request = 50
-    max_total_tweets = 50
     sequence = 0
-    while True:
+    while len(user_tweets.get(screen_name, [])) < MAX_TWEETS_PER_FRIEND:
         sequence += 1
         logger.info('[twitter][%s] Getting tweets for @%s', sequence, screen_name)
         url = '{}/statuses/user_timeline.json'.format(PRE)
         url += '?screen_name={}'.format(screen_name)
-        url += '&count={}'.format(max_tweets_per_request)
+        url += '&count={}'.format(MAX_TWEETS_PER_REQUEST)
         if last_id:
             url += '&max_id={}'.format(last_id)
         logger.info('[twitter] Fetching %s', url)
@@ -81,14 +80,14 @@ def get_tweets(screen_name):
             logger.info('[twitter] DONE: now new tweets for @%s', screen_name)
             break
         new_last_id = new_tweets[-1][0]
-        if new_last_id == last_id or len(user_tweets.get(screen_name, [])) >= max_total_tweets:
+        if new_last_id == last_id:
             logger.info('[twitter] DONE: getting tweets for @%s', screen_name)
             break
         else:
             last_id = new_last_id
             user_tweets.setdefault(screen_name, [])
             user_tweets[screen_name].extend(new_tweets)
-    return user_tweets[screen_name]
+    return user_tweets.get(screen_name, [])
 
 
 def get_rate_limit_status():
