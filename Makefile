@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := all
 
 .PHONY: all
-all: install-prepush lint
+all: requirements install-prepush lint
 
 .PHONY: lint
 lint:
