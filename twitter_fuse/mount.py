@@ -106,7 +106,7 @@ class TwitterMount(Operations):
             return '\n'.join(self.errors if self.errors else [])
         screen_name, tweet_id = parse_path(path)
         _, tweet = self.user_tweets.get(screen_name, {}).get(tweet_id, (0, ''))
-        return ''.join([chr(x) for x in tweet[offset: offset + length]])
+        return ''.join([chr(x) for x in tweet[offset: offset + length]]) + '\n'
 
 
 def parse_path(path):
