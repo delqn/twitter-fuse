@@ -25,11 +25,11 @@ class TwitterMount(Operations):
         if screen_name not in self.user_tweets or time.time() >= self.next_fetch:
             self.next_fetch = int(time.time()) + FETCH_AGAIN_AFTER_SECONDS
             all_tweets_for_user = self.user_tweets.get(screen_name, {}).keys()
-            start_from_tweet = max(all_tweets_for_user) if all_tweets_for_user else None
+            since_tweet_id = max(all_tweets_for_user) if all_tweets_for_user else None
             self.user_tweets.setdefault(screen_name, {})
             self.user_tweets[screen_name].update({
                 tid: (tdate, txt)
-                for tid, tdate, txt in get_tweets_for(screen_name, start_from_tweet)})
+                for tid, tdate, txt in get_tweets_for(screen_name, since_tweet_id)})
 
     def access(self, path, mode):
         self.access_seqnum += 1
@@ -61,7 +61,7 @@ class TwitterMount(Operations):
                 st_size = len('\n'.join(self.errors)) if self.errors else 0
             else:
                 st_mtime, tweet = self.user_tweets[screen_name].get(tweet_id, (None, 0))
-                st_size = len(bytearray(tweet)) if tweet else 0
+                st_size = len(bytearray(tweet)) + 1 if tweet else 0
         logger.info('[mount] getattr: path=%s, fh=%s', path, fh)
         return dict(
             st_uid=UID, st_gid=GID,
