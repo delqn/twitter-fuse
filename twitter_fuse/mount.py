@@ -2,6 +2,7 @@ from __future__ import with_statement
 
 import errno
 import os
+import time
 
 from .twitter import get_friends, get_tweets_for
 from .logger import logger
@@ -10,18 +11,25 @@ from fuse import FUSE, FuseOSError, Operations
 
 GID = os.getgid()
 UID = os.getuid()
+FETCH_AGAIN_AFTER_SECONDS = 60 * 3  # 3 minutes
 
 
-class TwitterClient(Operations):
+class TwitterMount(Operations):
     def __init__(self):
         self.followers, self.errors = get_friends()
         self.user_tweets = {}
         self.access_seqnum = 0
+        self.next_fetch = int(time.time()) + FETCH_AGAIN_AFTER_SECONDS
 
     def _fill_tweets_for(self, screen_name):
-        if screen_name not in self.user_tweets:
-            self.user_tweets[screen_name] = {
-                tid: (tdate, txt) for tid, tdate, txt in get_tweets_for(screen_name)}
+        if screen_name not in self.user_tweets or time.time() >= self.next_fetch:
+            self.next_fetch = int(time.time()) + FETCH_AGAIN_AFTER_SECONDS
+            all_tweets_for_user = self.user_tweets.get(screen_name, {}).keys()
+            start_from_tweet = max(all_tweets_for_user) if all_tweets_for_user else None
+            self.user_tweets.setdefault(screen_name, {})
+            self.user_tweets[screen_name].update({
+                tid: (tdate, txt)
+                for tid, tdate, txt in get_tweets_for(screen_name, start_from_tweet)})
 
     def access(self, path, mode):
         self.access_seqnum += 1
@@ -109,4 +117,4 @@ def parse_path(path):
 
 
 def mount(mountpoint):
-    FUSE(TwitterClient(), mountpoint, nothreads=True, foreground=True)
+    FUSE(TwitterMount(), mountpoint, nothreads=True, foreground=True)

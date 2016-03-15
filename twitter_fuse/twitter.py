@@ -52,8 +52,8 @@ def get_settings():
     return requests.get(url, auth=get_oauth()).json()
 
 
-def get_tweets_for(screen_name):
-    max_id = None
+def get_tweets_for(screen_name, start_from_tweet=None):
+    max_id = start_from_tweet
     user_tweets = []
     static_url = '{}/statuses/user_timeline.json?screen_name={}&count={}'.format(
         PRE, screen_name, TWEETS_PER_REQUEST)
