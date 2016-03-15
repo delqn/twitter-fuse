@@ -68,7 +68,6 @@ class TwitterClient(Operations):
             dirs.append('errors')
         if path == '/':
             dirs.extend(self.followers)
-            dirs.extend(['{}.nb'.format(follower) for follower in self.followers])
         else:
             screen_name, _ = parse_path(path)
             dirs.extend(self.user_tweets[screen_name].keys())
@@ -104,7 +103,7 @@ class TwitterClient(Operations):
 
 def parse_path(path):
     pieces = path.split('/')
-    screen_name = pieces[1].replace('.nb', '')
+    screen_name = pieces[1]
     tweet_id = pieces[2] if len(pieces) > 2 else None
     return screen_name if screen_name else None, tweet_id
 
