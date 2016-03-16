@@ -85,6 +85,6 @@ class MountTest(unittest.TestCase):
     def test_fill_tweets_for(self):
         self.mount._fill_tweets_for('some_other_user')
         mount.get_tweets_for.assert_called_with('some_other_user', None)
-        self.mount.next_fetch = 0
+        self.mount.user_next_fetch['some_other_user'] = 0
         self.mount._fill_tweets_for('some_other_user')
         mount.get_tweets_for.assert_called_with('some_other_user', 'id_2')

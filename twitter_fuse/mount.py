@@ -18,12 +18,12 @@ class TwitterMount(Operations):
     def __init__(self):
         self.followers, self.errors = get_friends()
         self.user_tweets = {}
-        self.access_seqnum = 0
-        self.next_fetch = int(time.time()) + FETCH_AGAIN_AFTER_SECONDS
+        self.user_next_fetch = {}
 
     def _fill_tweets_for(self, screen_name):
-        if screen_name not in self.user_tweets or time.time() >= self.next_fetch:
-            self.next_fetch = int(time.time()) + FETCH_AGAIN_AFTER_SECONDS
+        next_fetch = self.user_next_fetch.get(screen_name, 0)
+        if screen_name not in self.user_tweets or time.time() >= next_fetch:
+            self.user_next_fetch[screen_name] = int(time.time()) + FETCH_AGAIN_AFTER_SECONDS
             all_tweets_for_user = self.user_tweets.get(screen_name, {}).keys()
             since_tweet_id = max(all_tweets_for_user) if all_tweets_for_user else None
             self.user_tweets.setdefault(screen_name, {})
@@ -32,8 +32,6 @@ class TwitterMount(Operations):
                 for tid, tdate, txt in get_tweets_for(screen_name, since_tweet_id)})
 
     def access(self, path, mode):
-        self.access_seqnum += 1
-        # logger.info('[%s]: access:   path=%s, mode=%s', self.access_seqnum, path, mode)
         if path == '/':
             return
 
