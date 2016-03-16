@@ -11,7 +11,7 @@ from fuse import FUSE, FuseOSError, Operations
 
 GID = os.getgid()
 UID = os.getuid()
-FETCH_AGAIN_AFTER_SECONDS = 60 * 3  # 3 minutes
+FETCH_AGAIN_AFTER_SECONDS = 15
 
 
 class TwitterMount(Operations):
@@ -25,11 +25,10 @@ class TwitterMount(Operations):
         if screen_name not in self.user_tweets or time.time() >= next_fetch:
             self.user_next_fetch[screen_name] = int(time.time()) + FETCH_AGAIN_AFTER_SECONDS
             all_tweets_for_user = self.user_tweets.get(screen_name, {}).keys()
-            since_tweet_id = max(all_tweets_for_user) if all_tweets_for_user else None
+            since_tweet_id = max(all_tweets_for_user) if all_tweets_for_user else 1
             self.user_tweets.setdefault(screen_name, {})
-            self.user_tweets[screen_name].update({
-                tid: (tdate, txt)
-                for tid, tdate, txt in get_tweets_for(screen_name, since_tweet_id)})
+            print get_tweets_for(screen_name, since_tweet_id)
+            self.user_tweets[screen_name].update(get_tweets_for(screen_name, since_tweet_id))
 
     def access(self, path, mode):
         if path == '/':
@@ -69,16 +68,16 @@ class TwitterMount(Operations):
     def readdir(self, path, fh):
         logger.info('[mount] readdir: path=%s, fh=%s, len(followers)=%s, len(user_tweets)=%s',
                     path, fh, len(self.followers), len(self.user_tweets))
-        dirs = ['.', '..']
+        file_names = ['.', '..']
         if self.errors:
-            dirs.append('errors')
+            file_names.append('errors')
         if path == '/':
-            dirs.extend(self.followers)
+            file_names.extend(self.followers)
         else:
             screen_name, _ = parse_path(path)
-            dirs.extend(self.user_tweets[screen_name].keys())
-        for r in dirs:
-            yield r
+            file_names.extend(self.user_tweets[screen_name].keys())
+        for filename in file_names:
+            yield str(filename)
 
     def statfs(self, path):
         # logger.info('[mount] statfs: path=%s', path)

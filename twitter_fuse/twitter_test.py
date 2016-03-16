@@ -52,15 +52,15 @@ class TwitterTest(unittest.TestCase):
     @responses.activate
     def get_tweets_for_test(self):
         tweets = twitter.get_tweets_for(screen_name='some-user')
-        expected = [
-            ('240859602684612608',
-             1346289178,
-             bytearray(b'Introducing the Twitter Certified Products '
-                       'Program: https://t.co/MjJ8xAnT')),
-            ('239413543487819778',
-             1345944411,
-             bytearray(b'We are working to resolve issues with application management & logging '
-                       'in to the dev portal: https://t.co/p5bOzH0k ^TS'))]
+        expected = {
+            240859602684612608: (
+                1346289178,
+                bytearray(b'Introducing the Twitter Certified Products '
+                          'Program: https://t.co/MjJ8xAnT')),
+            239413543487819778: (
+                1345944411,
+                bytearray(b'We are working to resolve issues with application management '
+                          '& logging in to the dev portal: https://t.co/p5bOzH0k ^TS'))}
 
         self.assertEqual(tweets, expected)
 

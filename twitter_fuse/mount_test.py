@@ -13,7 +13,7 @@ class MountTest(unittest.TestCase):
     def setUp(self):
         config.get_config(CONF_FILE, 'twitterapi')
         mount.get_friends = mock.MagicMock(return_value=(['a', 'b'], None))
-        mount.get_tweets_for = mock.MagicMock(return_value=[('id_1', 2, 3), ('id_2', 'b', 'c')])
+        mount.get_tweets_for = mock.MagicMock(return_value={1: (2, 3), 2: ('b', 'c')})
         self.mount = mount.TwitterMount()
         self.mount.followers = ['a', 'b', 'some_user']
         self.mount.user_tweets = {'a': {'3': (123, bytearray(b'three')),
@@ -84,7 +84,7 @@ class MountTest(unittest.TestCase):
 
     def test_fill_tweets_for(self):
         self.mount._fill_tweets_for('some_other_user')
-        mount.get_tweets_for.assert_called_with('some_other_user', None)
+        mount.get_tweets_for.assert_called_with('some_other_user', 1)
         self.mount.user_next_fetch['some_other_user'] = 0
         self.mount._fill_tweets_for('some_other_user')
-        mount.get_tweets_for.assert_called_with('some_other_user', 'id_2')
+        mount.get_tweets_for.assert_called_with('some_other_user', 2)
