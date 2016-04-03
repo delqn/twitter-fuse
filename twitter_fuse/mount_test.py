@@ -81,6 +81,7 @@ class MountTest(unittest.TestCase):
 
     def test_parse_path(self):
         self.assertEqual((None, None), mount.parse_path('/'))
+        self.assertEqual(('blah', 123), mount.parse_path('/blah/123'))
 
     def test_fill_tweets_for(self):
         self.mount._fill_tweets_for('some_other_user')

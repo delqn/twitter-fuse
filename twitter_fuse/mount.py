@@ -14,6 +14,13 @@ UID = os.getuid()
 FETCH_AGAIN_AFTER_SECONDS = 15
 
 
+def logit(fn):
+    def wrapper(*args, **kwargs):
+        logger.info('[mount] %s %s %s', str(fn).split(' ')[1], args, kwargs)
+        return fn(*args, **kwargs)
+    return wrapper
+
+
 class TwitterMount(Operations):
     def __init__(self):
         self.followers, self.errors = get_friends()
@@ -30,12 +37,15 @@ class TwitterMount(Operations):
             print get_tweets_for(screen_name, since_tweet_id)
             self.user_tweets[screen_name].update(get_tweets_for(screen_name, since_tweet_id))
 
+    @logit
     def access(self, path, mode):
         if path == '/':
             return
 
         screen_name, tweet_id = parse_path(path)
         if screen_name not in self.followers:
+            logger.error('[mount][access] Error: %s not in followers list: %s',
+                         screen_name, self.followers)
             raise FuseOSError(errno.EACCES)
 
         self._fill_tweets_for(screen_name)
@@ -44,8 +54,11 @@ class TwitterMount(Operations):
             return
 
         if tweet_id not in self.user_tweets.get(screen_name, {}):
+            logger.error('[mount][access] Error: %s not in tweets fetched for user %s: %s',
+                         tweet_id, screen_name, self.user_tweets.get(screen_name, {}))
             raise FuseOSError(errno.EACCES)
 
+    @logit
     def getattr(self, path, fh=None):
         st_size = 68
         st_mtime = 1
@@ -53,10 +66,13 @@ class TwitterMount(Operations):
         screen_name, tweet_id = parse_path(path)
         is_file = tweet_id in self.user_tweets.get(screen_name, {}) or 'error' in path
         if is_file:
+            logger.info('[mount][getattr] this is a file')
             st_mode = 33188
             if 'error' in path:
+                logger.info('[mount][getattr] looking at an error')
                 st_size = len('\n'.join(self.errors)) if self.errors else 0
             else:
+                logger.info('[mount][getattr] looking good')
                 st_mtime, tweet = self.user_tweets[screen_name].get(tweet_id, (None, 0))
                 st_size = len(bytearray(tweet)) + 1 if tweet else 0
         logger.info('[mount] getattr: path=%s, fh=%s', path, fh)
@@ -65,6 +81,7 @@ class TwitterMount(Operations):
             st_atime=0, st_ctime=0, st_mtime=st_mtime,
             st_nlink=0, st_mode=st_mode, st_size=st_size)
 
+    @logit
     def readdir(self, path, fh):
         logger.info('[mount] readdir: path=%s, fh=%s, len(followers)=%s, len(user_tweets)=%s',
                     path, fh, len(self.followers), len(self.user_tweets))
@@ -79,8 +96,8 @@ class TwitterMount(Operations):
         for filename in file_names:
             yield str(filename)
 
+    @logit
     def statfs(self, path):
-        # logger.info('[mount] statfs: path=%s', path)
         return dict(
             f_bsize=1048576,
             f_bavail=3348393,
@@ -93,10 +110,12 @@ class TwitterMount(Operations):
             f_namemax=255,
             f_flag=0)
 
+    @logit
     def open(self, path, flags):
         logger.info('[mount] open: path=%s, flags=%s', path, flags)
         return 12
 
+    @logit
     def read(self, path, length, offset, fh):
         logger.info('[mount] read: path=%s, length=%s, offset=%s, fh=%s', path, length, offset, fh)
         if 'error' in path:
@@ -109,7 +128,7 @@ class TwitterMount(Operations):
 def parse_path(path):
     pieces = path.split('/')
     screen_name = pieces[1]
-    tweet_id = pieces[2] if len(pieces) > 2 else None
+    tweet_id = int(pieces[2]) if len(pieces) > 2 else None
     return screen_name if screen_name else None, tweet_id
 
 

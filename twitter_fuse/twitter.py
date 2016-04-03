@@ -56,7 +56,13 @@ def get_tweets_for(screen_name, since_tweet_id=None, max_id=None):
         PRE, screen_name, TWEETS_PER_REQUEST, since_tweet_id)
     logger.info('[twitter] Fetching new tweets for @%s via %s', screen_name, url)
     response = requests.get(url, auth=get_oauth())
-    _new = ((t['id_str'], t['created_at'], t['text']) for t in response.json())
+    _new = []
+    for t in response.json():
+        try:
+            _new.append((t['id_str'], t['created_at'], t['text']))
+        except Exception as e:
+            print t, e
+
     return {int(tid): (timestamp(tdate), bytearray(txt, 'utf-8')) for tid, tdate, txt in _new}
 
 
